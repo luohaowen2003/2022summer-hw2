@@ -114,11 +114,12 @@ class WebVPN:
 
     def login_info(self):
         """
-        TODO: After successfully logged into WebVPN, login to info.tsinghua.edu.cn
+        After successfully logged into WebVPN, login to info.tsinghua.edu.cn
 
         :return:
         """
 
+        # log into info.tsinghua.edu.cn
         uid = By.XPATH, '//input[@name="userName"]'
         pwd = By.XPATH, '//input[@name="password"]'
         button = By.XPATH, '//input[@src="initial/all/images/t_09.gif"]'
@@ -131,28 +132,12 @@ class WebVPN:
         but=self.driver.find_element(*button)
         but.click()
 
-        wdw(self.driver, 5).until(EC.visibility_of_element_located((By.LINK_TEXT,"全部成绩")))
-        self.driver.implicitly_wait(5)
-        grades=self.driver.find_element(By.LINK_TEXT,"全部成绩")
-        grades.click()
-
-        # print(self.driver.window_handles)
-
-        for window_handle in self.driver.window_handles:
-            if window_handle != self.driver.current_window_handle and window_handle != self.root_handle:
-                self.driver.switch_to.window(window_handle)
-                return
-
-
-        # Hint: - Use `access` method to jump to info.tsinghua.edu.cn
-        #       - Use `switch_another` method to change the window handle
-        #       - Wait until the elements are ready, then preform your actions
-        #       - Before return, make sure that you have logged in successfully
+        return
         
 
     def get_grades(self):
         """
-        TODO: Get and calculate the GPA for each semester.
+        Get and calculate the GPA for each semester.
 
         Example return / print:
             2020-秋: *.**
@@ -163,12 +148,26 @@ class WebVPN:
 
         :return:
         """
+
+        # enter the grade page
+        wdw(self.driver, 5).until(EC.visibility_of_element_located((By.LINK_TEXT,"全部成绩")))
+        self.driver.implicitly_wait(5)
+        grades=self.driver.find_element(By.LINK_TEXT,"全部成绩")
+        grades.click()
+
+        # switch to grade page
+        for window_handle in self.driver.window_handles:
+            if window_handle != self.driver.current_window_handle and window_handle != self.root_handle:
+                self.driver.switch_to.window(window_handle)
+
+        # figure out grades
         d=self.driver
         table_path = '//table[@class="table table-striped  table-condensed"]'
-        tables = d.find_elements(By.XPATH,table_path)
-        table = tables[0]
+        table = d.find_elements(By.XPATH,table_path)[0]
         courses = table.find_elements(By.XPATH, "./tbody/tr")
-        n = len(courses)-2
+
+        # calculate gpa for each semester
+        n = len(courses)-2  #n is the number of courses
         semester=""
         semester_pattern=re.compile('\d{4}-\d{4}-\d')
         gpa={}
@@ -178,12 +177,15 @@ class WebVPN:
         for i in range(1,n+1):
             info = courses[i].find_elements(By.XPATH,'./td/div[@align="center"]')
             
+            # make sure that "替换课程" and "特殊课程标注" do not affect getting semester information
             semester_i = info[7].text
             if not semester_pattern.match(info[7].text):
                 if semester_pattern.match(info[8].text):
                     semester_i = info[8].text
                 else:
                     semester_i=info[9].text
+            
+            # check if a new semester starts
             if semester != semester_i:
                 if semester:
                     gpa[semester] = total_score / credits
@@ -191,11 +193,21 @@ class WebVPN:
                 credits=0
                 total_score=0
             
-            credits += int(info[2].text)
-            total_score += float(info[5].text) * int(info[2].text)
+            # ignore "N/A"
+            if info[5].text != "N/A":
+                credit_i = int(info[2].text)
+                score_i = float(info[5].text)
+            else:
+                continue
 
+            credits += credit_i
+            total_score += score_i * credit_i
+
+            # calculate gpa for the last semester before exit the loop
             if(i==n):
                 gpa[semester] = total_score / credits
+
+        self.close_all()
 
         for key in gpa:
             sem = ""
@@ -220,6 +232,12 @@ class WebVPN:
 if __name__ == "__main__":
     with open("settings.json","r") as f:
         w=WebVPN(json.load(f))
+
+        if w.userid == "":
+            w.userid = input("请输入您的学号： ")
+        if w.passwd == "":
+            w.passwd = input("请输入您的info密码： ")
+
         w.login_webvpn()
         print('*'*20,'\n',"Checking your gpa, it can take a while...",'\n','*'*20)
         w.access("http://info.tsinghua.edu.cn")

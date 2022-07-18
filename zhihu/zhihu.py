@@ -232,35 +232,9 @@ VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
 
     def get_board(self) -> list:
         """
-        TODO: Fetch current hot questions
+        Fetch current hot questions
 
         :return: hot question list, ranking from high to low
-
-        Return Example:
-        [
-            {
-                'title': '针对近期生猪市场非理性行为，国家发展改革委研究投放猪肉储备，此举对市场将产生哪些积极影响？',
-                'heat': '76万热度',
-                'excerpt': '据国家发展改革委微信公众号 7 月 5 日消息，针对近期生猪市场出现盲目压栏惜售等非理性行为，国家发展改革委价格司正研究启动投放中央猪肉储备，并指导地方适时联动投放储备，形成调控合力，防范生猪价格过快上涨。',
-                'url': 'https://www.zhihu.com/question/541600869',
-                'qid': 541600869,
-            },
-            {
-                'title': '有哪些描写夏天的古诗词？',
-                'heat': '41万热度',
-                'excerpt': None,
-                'url': 'https://www.zhihu.com/question/541032225',
-                'qid': 541032225,
-            },
-            {
-                'title':    # 问题标题
-                'heat':     # 问题热度
-                'excerpt':  # 问题摘要
-                'url':      # 问题网址
-                'qid':      # 问题编号
-            }
-            ...
-        ]
         """
 
         url = "https://www.zhihu.com/hot"
@@ -272,71 +246,52 @@ VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
 
         for i in sections:
             try:
+                # get url
                 dic = {}
                 dic['url'] = i.find('a')['href']
+
+                # get qid (also check whether the item is a question)
                 qid_pattern = re.compile('question/(\d+)')
                 m_list = qid_pattern.findall(dic['url'])
                 if m_list:
                     dic['qid']=m_list[0]
                 else:
                     continue
+
+                # get title
                 dic["title"] = i.find('a')['title']
+
+                # get excerpt, if any
                 excerpt = i.find('p',class_ = "HotItem-excerpt")
                 if excerpt:
                     dic["excerpt"]=excerpt.txt
                 else:
                     dic["excerpt"]=None
+
+                # get heat
                 dic['heat'] = i.find('div',class_ = "HotItem-metrics").text
                 heat_pattern = re.compile('.+热度')
                 dic['heat'] = heat_pattern.findall(dic['heat'])[0]
+
                 question_list.append(dic)
-                # print(len(question_list))
             except:
                 continue
 
         return question_list
 
-        # Hint: - Parse HTML, pay attention to the <section> tag.
-        #       - Use keyword argument `class_` to specify the class of a tag in `find`
-        #       - Hot Question List can be accessed in https://www.zhihu.com/hot
-
-        # raise NotImplementedError
-
     def get_question(self, qid: int) -> dict:
         """
-        TODO: Fetch question info by question ID
+        Fetch question info by question ID
 
         :param qid: Question ID
         :return: a dict of question info
-
-        Return Example:
-        {
-            "created": 1657248657,      # 问题的创建时间
-            "followerCount": 5980,      # 问题的关注数量
-            "visitCount": 2139067,      # 问题的浏览次数
-            "answerCount": 2512         # 问题的回答数量
-            "title": "日本前首相安倍      # 问题的标题
-                晋三胸部中枪已无生命
-                体征 ，嫌疑人被控制，
-                目前最新进展如何？背
-                后原因为何？",
-            "raw": "<p>据央视新闻，        # 问题的详细描述
-                当地时间8日，日本前
-                首相安倍晋三当天上午
-                在奈良发表演讲时中枪
-                。据悉，安倍晋三在上
-                救护车时还有意。。。",
-            "hit_at": 1657264954.3134503  # 请求的时间戳
-        }
         """
 
         qid = str(qid)
         url = "https://www.zhihu.com/question/" + qid
-        headers = {
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36",
-                "Cookie": '_zap=0095d9c6-45e8-4670-93d5-2e164d6876e2; _xsrf=IWDoh8eD3Chb8094wbsSMGu52i6KLKyJ; d_c0="AKBRzNebQRWPTj7xC4fffJ0MrfSmXz2rf2k=|1657960182"; __snaker__id=FjOPfv7h6UdRET2M; _9755xjdesxxd_=32; YD00517437729195%3AWM_NI=Q81WY8%2BGluyLTYAP0xmIW9Vzpiwt%2FNuCg%2F%2BH1ORQGJjoa3LmUw0wtyboCpcqfZNC%2FvuGg1scJuM6BcUJwggrE%2Bi5q2F%2FXV2gXn3vQBrflvdNJNb%2FQH%2F7EpdGqUrRiDJbMWQ%3D; YD00517437729195%3AWM_NIKE=9ca17ae2e6ffcda170e2e6eed4d33e90e9add5c83e96b48eb6c84b868f9bb0d154978ebdb4d149f595e596c82af0fea7c3b92a93e8ffb8dc34e999a496fc4898878fb1b374af9799dad572b4b7b995ae46b79da9d0aa44f3919eb2c642aab1afd4cf6797a90098f773a2b18d91e27ba68682a4ae7eb799a9d2f2698aab83d7c1699796b988e67a87f5a7d6f43a86f198b7b16d9cb2fd97d44ab2baa497e7468a92aed0d444ede98b91e74db38bbeb3ec508abe83b8d437e2a3; YD00517437729195%3AWM_TID=dJvXNiE7GRpEVUVFRBPATRU8WEH7KurB; gdxidpyhxdE=tlWtge%2FiNWQxep4D60%5CnPmQJB7mMLu7U1pKAxvV1s3fLUdjlpwVZ5ug9WDM7y0WAqWSirut%2FoQqqZb6S%5C3U4arV1CA1WIG43rP9ot92IjGN5QPHZxttqeRAYLcN%2F9Q2IX2x%5Ccj9injOvS%2BvRa4eu%2Bomyua30DT%2FpPlyXVaml274QO1%2Fc%3A1657972288657; o_act=login; ref_source=other_https://www.zhihu.com/signin?next=/; auth_type=wechat; token=58_FhYkOGjzMk7j_elv4J6fvBfpuKtT-A78UGfIV4EbtwQJ1w5zAK1BaomCtfBRPpE8lVe4tc2OPgPaV2Mrk868VO8jY7mmE6kdgv6vclpdnfw; atoken=58_FhYkOGjzMk7j_elv4J6fvBfpuKtT-A78UGfIV4EbtwQJ1w5zAK1BaomCtfBRPpE8lVe4tc2OPgPaV2Mrk868VO8jY7mmE6kdgv6vclpdnfw; atoken_expired_in=7200; client_id=o3p2-jh7itGYP6k_XMx4sLZkbkCE; capsion_ticket=2|1:0|10:1657971972|14:capsion_ticket|44:MDIxOWQ3NDA5MjNhNDAxOWI1YjdkMDI4ZTVkZGRiNDg=|9b0fc41bc765368b4bd1f48085e4a93aae67744a5c2153702710c08bc9a94973; captcha_session_v2=2|1:0|10:1657972027|18:captcha_session_v2|88:MmJ1YnpRNWMvN3NpN0FxUEhHenRaSlROVkJoQVhEM1dSNWtDMTVoRCt4eTIxbzUyS3JjbnNsVGRwSmZYTzc2Rg==|85ac3966d35dc4c337bb9b26b48d1371ce25da0604b6392cc2768108e7412a6e; z_c0=2|1:0|10:1657972052|4:z_c0|92:Mi4xdHZod0FBQUFBQUFBb0ZITTE1dEJGU2NBQUFCZ0FsVk5WREw2WWdDVWJabExwWUNmbWk0WTl4Y2tuRlpRZWxaM2hR|e78217d42f672668bac32a8b05d24db43189649d9d1d3d160549aa4b3a57b2b0; q_c1=254f23451a63411cbc5a2d5442b0137e|1657972052000|1657972052000; NOT_UNREGISTER_WAITING=1; Hm_lvt_98beee57fd2ef70ccdd5ca52b9740c49=1657960184,1657970535,1657972060; tst=h; Hm_lpvt_98beee57fd2ef70ccdd5ca52b9740c49=1657972084; SESSIONID=avjzwW4xq25qvcaz82IppXgrbpLmFtYGCXzk152kN6C; JOID=WlsTC0jrAoM7xbVYQOuCX-IYLhlbgXHnSrnpaTaRO7NEuN0yP5OsVFnFu1NFFrM0T4ZlFxqGO5omxnMknrB1H_A=; osd=UFESBkPhCII2zr9SQeaJVegZIxJRi3DqQbPjaDuaMblFtdY4NZKhX1PPul5OHLk1Qo1vHRuLMJAsx34vlLp0Evs=; KLBRSID=2177cbf908056c6654e972f5ddc96dc2|1657972097|1657971930'
-            }
+        headers = self.settings["headers"]
         res = requests.get(url,headers = headers).text
+        
         soup = BS(res,'lxml')
         script = soup.find('script',id = "js-initialData").text
 
@@ -351,15 +306,6 @@ VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
         dic["hit_at"] = time.time()
 
         return dic
-
-        # Hint: - Parse JSON, which is embedded in a <script> and contains all information you need.
-        #       - After find the element in soup, use `.text` attribute to get the inner text
-        #       - Use `json.loads` to convert JSON string to `dict` or `list`
-        #       - You may first save the JSON in a file, format it and locate the info you need
-        #       - Use `time.time()` to create the time stamp
-        #       - Question can be accessed in https://www.zhihu.com/question/<Question ID>
-
-        raise NotImplementedError
 
 if __name__ == "__main__":
     z = ZhihuCrawler()
