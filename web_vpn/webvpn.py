@@ -1,3 +1,4 @@
+from getpass import getpass
 from selenium.webdriver.remote.webdriver import WebDriver as wd
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
@@ -11,6 +12,18 @@ from bs4 import BeautifulSoup as BS
 import json
 from selenium import webdriver
 import re
+import argparse
+
+def get_parse_data():
+    """解析命令行参数"""
+    parser = argparse.ArgumentParser(
+            prog='Webvpn',
+            description='Log into info and check your GPA',
+            allow_abbrev=True,
+        )
+    parser.add_argument("-hl",'--headless',action="store_true",help="use headless browser",)
+    args = parser.parse_args()
+    return args.headless
 
 class WebVPN:
     def __init__(self, opt: dict, headless=False):
@@ -20,7 +33,7 @@ class WebVPN:
         self.userid = opt["username"]
         self.headless = headless
 
-    def login_webvpn(self):
+    def login_webvpn(self,headless):
         """
         Log in to WebVPN with the account specified in `self.userid` and `self.passwd`
 
@@ -29,7 +42,8 @@ class WebVPN:
 
         options=webdriver.ChromeOptions()
         options.add_argument('blink-settings=imagesEnabled=false')
-        options.add_argument('--headless')
+        if headless:
+            options.add_argument('--headless')
 
         d = self.driver
         if d is not None:
@@ -198,6 +212,8 @@ class WebVPN:
                 credit_i = int(info[2].text)
                 score_i = float(info[5].text)
             else:
+                if(i==n):
+                    gpa[semester] = total_score / credits
                 continue
 
             credits += credit_i
@@ -236,9 +252,10 @@ if __name__ == "__main__":
         if w.userid == "":
             w.userid = input("请输入您的学号： ")
         if w.passwd == "":
-            w.passwd = input("请输入您的info密码： ")
+            w.passwd = getpass("请输入您的info密码： ")
 
-        w.login_webvpn()
+        headless=get_parse_data()
+        w.login_webvpn(headless)
         print('*'*20,'\n',"Checking your gpa, it can take a while...",'\n','*'*20)
         w.access("http://info.tsinghua.edu.cn")
         w.switch_another()
